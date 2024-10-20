@@ -1,0 +1,108 @@
+name: mongo-sharding-repl
+
+services:
+  # Mongo configuration server
+  configSrv:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: configSrv 
+    ports:
+      - 27017:27017
+    networks:
+      - mongonetwork
+    command: --configsvr --replSet config_server --bind_ip_all --port 27017
+
+  # Mongo shard 1-1
+  shard1-1:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1-1
+    ports:
+      - 27018:27018
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard1ReplicaSet --port 27018
+
+  # Mongo shard 1-2
+  shard1-2:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1-2
+    ports:
+      - 27021:27021
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard1ReplicaSet --port 27021
+    
+  # Mongo shard 1-3
+  shard1-3:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard1-3
+    ports:
+      - 27022:27022
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard1ReplicaSet --port 27022
+
+
+  # Mongo shard 2-1
+  shard2-1:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2-1
+    ports:
+      - 27019:27019
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard2ReplicaSet --port 27019
+
+  # Mongo shard 2-2
+  shard2-2:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2-2
+    ports:
+      - 27023:27023
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard2ReplicaSet --port 27023
+
+  # Mongo shard 2-3
+  shard2-3:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: shard2-3
+    ports:
+      - 27024:27024
+    networks:
+      - mongonetwork
+    command: --shardsvr --replSet shard2ReplicaSet --port 27024
+
+  # Mongo router server
+  mongos_router:
+    image: dh-mirror.gitverse.ru/mongo:latest
+    container_name: mongos_router
+    ports:
+      - 27020:27020
+    networks:
+      - mongonetwork
+    volumes:
+      - mongodb1_data_container:/data/db
+    command: mongos --configdb config_server/configsrv:27017 --bind_ip_all --port 27020
+
+  # Application
+  pymongo_api:
+    container_name: pymongo_api
+    build: 
+      context: api_app
+      dockerfile: Dockerfile
+    image: kazhem/pymongo_api:1.0.0
+    depends_on:
+      - mongos_router
+    ports:
+      - 8080:8080
+    networks:
+      - mongonetwork
+    environment:
+      MONGODB_URL: "mongodb://mongos_router:27020"
+      MONGODB_DATABASE_NAME: "somedb"
+
+networks:
+  mongonetwork:
+
+volumes:
+  mongodb1_data_container:
